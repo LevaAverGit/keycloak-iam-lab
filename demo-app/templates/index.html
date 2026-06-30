@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keycloak IAM Lab</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; }
+        h1 { font-size: 1.8rem; }
+        .card { border: 1px solid #ddd; border-radius: 10px; padding: 24px; margin-top: 20px; }
+        a.btn { display: inline-block; background: #2d6cdf; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin-right: 10px; }
+        a.btn.secondary { background: #555; }
+        code { background: #f3f3f7; padding: 2px 6px; border-radius: 4px; }
+        ul { line-height: 1.7; }
+    </style>
+</head>
+<body>
+    <h1>Keycloak IAM Lab</h1>
+    <p>Демонстрация OAuth2 / OpenID Connect, JWT-валидации, RBAC и MFA на базе Keycloak.</p>
+
+    <div class="card">
+        {% if username %}
+            <p>Вы вошли как <strong>{{ username }}</strong>.</p>
+            <a class="btn" href="/dashboard">Личный кабинет</a>
+            <a class="btn secondary" href="/logout">Выйти</a>
+        {% else %}
+            <p>Вы не авторизованы.</p>
+            <a class="btn" href="/login">Войти через Keycloak (OIDC)</a>
+            <a class="btn secondary" href="/saml/login">Войти через SAML</a>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Демонстрируемые flows</h2>
+        <ul>
+            <li><strong>Authorization Code + PKCE</strong> — браузерный вход (<code>/login</code> → <code>/callback</code>)</li>
+            <li><strong>SAML 2.0 SSO</strong> — федерация по второму протоколу (<code>/saml/login</code>)</li>
+            <li><strong>JWE</strong> — ID token приходит зашифрованным (виден статус в кабинете)</li>
+            <li><strong>WebAuthn / passkey</strong> — вход под <code>passkey-user</code></li>
+            <li><strong>RBAC</strong> — роли <code>app-user</code> / <code>app-admin</code></li>
+            <li><strong>Client Credentials</strong> — <a href="/api/service-token">/api/service-token</a></li>
+            <li><strong>JWT claims</strong> — <a href="/api/whoami">/api/whoami</a></li>
+        </ul>
+    </div>
+</body>
+</html>

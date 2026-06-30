@@ -1,0 +1,11 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-jose[cryptography]==3.3.0
+# Pinned < 42: python-jose 3.3.0 calls OpenSSL RAND_bytes via cryptography's binding,
+# which was removed in cryptography 42. Newer versions break JWE encrypt/decrypt.
+cryptography==41.0.7
+httpx==0.27.0
+jinja2==3.1.4
+itsdangerous==2.2.0
+python-multipart==0.0.9
+python3-saml==1.16.0

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Keycloak IAM Lab</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; }
+        .card { border: 1px solid #ddd; border-radius: 10px; padding: 24px; margin-top: 20px; }
+        a.btn { display: inline-block; background: #2d6cdf; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin-right: 10px; }
+        a.btn.secondary { background: #555; }
+        .badge { display: inline-block; background: #e8f0fe; color: #2d6cdf; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; margin-right: 6px; }
+    </style>
+</head>
+<body>
+    <h1>Личный кабинет</h1>
+    <div class="card">
+        <p><strong>Пользователь:</strong> {{ username }}</p>
+        <p><strong>Email:</strong> {{ email }}</p>
+        <p><strong>Роли:</strong>
+            {% for role in roles %}<span class="badge">{{ role }}</span>{% endfor %}
+        </p>
+        {% if jwe_ok is not none %}
+        <p><strong>ID token (JWE):</strong>
+            {% if jwe_ok %}
+                <span class="badge" style="background:#e6f4ea;color:#1e7e34;">зашифрован и расшифрован ✓</span>
+            {% else %}
+                <span class="badge" style="background:#fde8e8;color:#c0392b;">ошибка расшифровки</span>
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        {% if is_admin %}
+            <a class="btn" href="/admin">Админ-панель (MFA)</a>
+        {% else %}
+            <p>Раздел администратора недоступен — нужна роль <code>app-admin</code>.</p>
+        {% endif %}
+        <a class="btn" href="/api/whoami">Мои JWT claims</a>
+        <a class="btn secondary" href="/logout">Выйти</a>
+    </div>
+</body>
+</html>

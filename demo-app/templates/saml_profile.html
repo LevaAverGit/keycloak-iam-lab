@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAML Profile — Keycloak IAM Lab</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; }
+        .card { border: 1px solid #ddd; border-radius: 10px; padding: 24px; margin-top: 20px; }
+        a.btn { display: inline-block; background: #2d6cdf; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin-right: 10px; }
+        a.btn.secondary { background: #555; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 0.9rem; }
+        th { background: #f3f3f7; }
+    </style>
+</head>
+<body>
+    <h1>SAML-сессия установлена</h1>
+    <div class="card">
+        <p>Вход выполнен через <strong>SAML 2.0</strong> — Keycloak выступил IdP,
+           приложение проверило подписанный assertion как SP.</p>
+        <p><strong>NameID:</strong> {{ nameid }}</p>
+
+        {% if attributes %}
+        <h3>Атрибуты из assertion</h3>
+        <table>
+            <tr><th>Атрибут</th><th>Значение</th></tr>
+            {% for key, values in attributes.items() %}
+            <tr><td>{{ key }}</td><td>{{ values | join(', ') }}</td></tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <a class="btn" href="/">На главную</a>
+        <a class="btn secondary" href="/saml/sls">Выйти из SAML-сессии</a>
+    </div>
+</body>
+</html>

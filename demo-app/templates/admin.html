@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Keycloak IAM Lab</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; }
+        .card { border: 1px solid #ddd; border-radius: 10px; padding: 24px; margin-top: 20px; }
+        .card.admin { border-color: #c0392b; }
+        a.btn { display: inline-block; background: #2d6cdf; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; margin-right: 10px; }
+        a.btn.secondary { background: #555; }
+        .badge { display: inline-block; background: #fde8e8; color: #c0392b; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; margin-right: 6px; }
+    </style>
+</head>
+<body>
+    <h1>Админ-панель</h1>
+    <div class="card admin">
+        <p>Доступ к этой странице защищён ролью <strong>app-admin</strong> и требует
+           прохождения <strong>MFA (TOTP)</strong> при входе.</p>
+        <p><strong>Администратор:</strong> {{ username }}</p>
+        <p><strong>Роли:</strong>
+            {% for role in roles %}<span class="badge">{{ role }}</span>{% endfor %}
+        </p>
+    </div>
+
+    <div class="card">
+        <a class="btn" href="/dashboard">К личному кабинету</a>
+        <a class="btn secondary" href="/logout">Выйти</a>
+    </div>
+</body>
+</html>

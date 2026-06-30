@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: iam-lab-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-keycloak}
+      POSTGRES_USER: ${POSTGRES_USER:-keycloak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-keycloak}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-keycloak}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - iam-lab
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: iam-lab-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-keycloak}
+      KC_DB_USERNAME: ${POSTGRES_USER:-keycloak}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-keycloak}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      # Pin the public frontend URL so the token `iss` is always localhost:8080,
+      # even though the backend exchanges code via the internal keycloak:8080 host.
+      # Without this, dev-mode derives `iss` from the backchannel host and JWT
+      # issuer validation in the demo-app fails. (QA finding C1.)
+      KC_HOSTNAME_URL: http://localhost:8080
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - iam-lab
+
+  demo-app:
+    build: ./demo-app
+    container_name: iam-lab-demo-app
+    environment:
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://localhost:8080}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-iam-lab}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-demo-app}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-service-client-secret}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-dev-secret-change-me}
+      APP_HOST: ${APP_HOST:-http://localhost:8000}
+    ports:
+      - "8000:8000"
+    # Start once Keycloak's container is up — not "healthy". JWKS is fetched lazily on
+    # the first protected request, so the app does not need Keycloak fully ready at boot.
+    # This avoids depending on a fragile in-container healthcheck (Keycloak's minimal
+    # image lacks curl/bash). Realm import takes ~30-40s — see README before first login.
+    depends_on:
+      - keycloak
+    networks:
+      - iam-lab
+
+volumes:
+  postgres_data:
+
+networks:
+  iam-lab:
+    driver: bridge
