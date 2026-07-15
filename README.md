@@ -1,5 +1,11 @@
 # Keycloak IAM Lab
 
+![Keycloak](https://img.shields.io/badge/Keycloak-IAM-4D4D4D)
+![OAuth2 / OIDC](https://img.shields.io/badge/OAuth2-OIDC-EB5424)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 Лабораторный проект, демонстрирующий построение Identity & Access Management на базе
 **Keycloak**: OAuth2, OpenID Connect, валидация JWT, ролевая модель (RBAC) и
 многофакторная аутентификация (MFA/TOTP). Backend — **FastAPI**, вся инфраструктура
