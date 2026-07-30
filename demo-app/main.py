@@ -24,7 +24,19 @@ import auth
 import saml
 
 app = FastAPI(title="Keycloak IAM Lab")
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("APP_SECRET_KEY", "dev-secret"))
+
+# The session cookie holds OAuth access/refresh tokens, so it is hardened:
+#  - SameSite=Lax mitigates CSRF on the cookie itself.
+#  - https_only (Secure flag) is opt-in via env — the lab runs over http://,
+#    but set APP_SESSION_HTTPS_ONLY=true when serving behind TLS in production.
+#  - max_age bounds the session lifetime instead of it living for the whole browser session.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("APP_SECRET_KEY", "dev-secret"),
+    same_site="lax",
+    https_only=os.getenv("APP_SESSION_HTTPS_ONLY", "false").lower() == "true",
+    max_age=int(os.getenv("APP_SESSION_MAX_AGE", "3600")),
+)
 templates = Jinja2Templates(directory="templates")
 
 
