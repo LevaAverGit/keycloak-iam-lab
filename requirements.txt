@@ -1,0 +1,7 @@
+# Root dependency entrypoint.
+#
+# Runtime dependencies for the FastAPI demo application (single source of truth):
+-r demo-app/requirements.txt
+
+# Test dependency. The unit suite in tests/ runs without a live Keycloak or Docker.
+pytest
