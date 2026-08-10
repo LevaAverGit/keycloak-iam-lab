@@ -1,5 +1,6 @@
 # Keycloak IAM Lab
 
+[![CI](https://github.com/LevaAverGit/keycloak-iam-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/LevaAverGit/keycloak-iam-lab/actions/workflows/ci.yml)
 ![Keycloak](https://img.shields.io/badge/Keycloak-IAM-4D4D4D)
 ![OAuth2 / OIDC](https://img.shields.io/badge/OAuth2-OIDC-EB5424)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -156,6 +157,26 @@ docker compose down -v
 | HTTP-клиент | httpx |
 | Шаблоны | Jinja2 |
 | Инфраструктура | Docker Compose, PostgreSQL 15 |
+
+---
+
+## Тесты
+
+Юнит-тесты покрывают security-critical локальную логику и запускаются **без Keycloak и
+Docker** (эта же проверка гоняется в CI на каждый push/PR): PKCE (S256), сборка
+authorize-URL, извлечение и проверка ролей (RBAC), публичный encryption-JWK Set,
+JWE-roundtrip и валидацию JWT (подпись RS256 по JWKS, `iss`, `exp`) на локально
+сгенерированных тестовых ключах.
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pytest -q
+```
+
+Интеграция с живым Keycloak (реальная выдача токенов, SAML-assertion, WebAuthn)
+проверяется отдельно на поднятом стенде — отчёты в
+[docs/test-reports/](docs/test-reports/).
 
 ---
 
