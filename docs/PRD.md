@@ -2,7 +2,7 @@
 
 ## Цель проекта
 
-Портфолийный лаборатории проект, демонстрирующий практические знания IAM/IDM архитектуры:
+Лабораторный проект для портфолио, демонстрирующий практические знания IAM/IDM-архитектуры:
 OAuth2, OpenID Connect, JWT, MFA. Предназначен для демонстрации работодателям уровня
 архитектора ИБ (целевая вакансия: Архитектор ИБ / IAM-специалист).
 
@@ -62,7 +62,8 @@ OAuth2, OpenID Connect, JWT, MFA. Предназначен для демонст
 
 ### Env-переменные (contracts для всех компонентов)
 ```
-KEYCLOAK_URL=http://keycloak:8080
+KEYCLOAK_URL=http://localhost:8080          # публичный хост: redirect'ы и token `iss`
+KEYCLOAK_INTERNAL_URL=http://keycloak:8080  # server-to-server: token exchange, JWKS
 KEYCLOAK_REALM=iam-lab
 KEYCLOAK_CLIENT_ID=demo-app
 KEYCLOAK_CLIENT_SECRET=  # для service-client

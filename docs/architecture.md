@@ -145,7 +145,12 @@ demo-app                                   Keycloak
    - **подписи** — RS256, ключ из JWKS (алгоритм захардкожен, защита от alg-confusion)
    - **issuer** — строго `http://localhost:8080/realms/iam-lab`
    - **expiry** — `exp`
-4. При истёкшем токене `current_claims()` пытается обновить его по refresh token
+   - **azp** — токен выпущен именно для `demo-app` (защита от переиспользования токена
+     другого клиента того же realm); `aud` Keycloak оставляет `account`, поэтому
+     проверяется authorized party
+4. Если `kid` из токена не найден в кэше JWKS (ротация ключей Keycloak) — один
+   принудительный рефреш JWKS перед отказом
+5. При истёкшем токене `current_claims()` пытается обновить его по refresh token
 
 **Где в коде:** `auth.validate_token()`, `main.current_claims()`.
 

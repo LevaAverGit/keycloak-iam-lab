@@ -113,11 +113,11 @@ async def refresh_access_token(refresh_token: str) -> dict:
 
 
 # --- JWKS + JWT validation ---
-async def _get_jwks() -> dict:
+async def _get_jwks(force: bool = False) -> dict:
     """Fetch and cache the realm's JSON Web Key Set used to verify token signatures."""
     global _jwks_cache, _jwks_fetched_at
     now = time.time()
-    if _jwks_cache is None or (now - _jwks_fetched_at) > _JWKS_TTL:
+    if force or _jwks_cache is None or (now - _jwks_fetched_at) > _JWKS_TTL:
         async with httpx.AsyncClient() as client:
             resp = await client.get(JWKS_ENDPOINT)
             resp.raise_for_status()
@@ -126,16 +126,25 @@ async def _get_jwks() -> dict:
     return _jwks_cache
 
 
+def _find_key(jwks: dict, kid: str | None) -> dict | None:
+    return next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
+
+
 async def validate_token(token: str) -> dict:
     """
-    Validate a JWT access token: signature (JWKS), issuer, expiry.
-    Returns the decoded claims, or raises JWTError on any failure.
+    Validate a JWT access token: signature (JWKS), issuer, expiry, and that it was
+    issued for this client. Returns the decoded claims, or raises JWTError on failure.
     """
-    jwks = await _get_jwks()
-    unverified_header = jwt.get_unverified_header(token)
-    kid = unverified_header.get("kid")
+    kid = jwt.get_unverified_header(token).get("kid")
 
-    key = next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
+    jwks = await _get_jwks()
+    key = _find_key(jwks, kid)
+    if key is None:
+        # kid absent from the cached set usually means Keycloak rotated its signing
+        # keys. Force one refresh before rejecting, so rotation doesn't fail every
+        # request until the cache TTL expires.
+        jwks = await _get_jwks(force=True)
+        key = _find_key(jwks, kid)
     if key is None:
         raise JWTError("Signing key not found in JWKS")
 
@@ -146,6 +155,13 @@ async def validate_token(token: str) -> dict:
         issuer=ISSUER,
         options={"verify_aud": False},  # Keycloak puts client in azp, not aud, by default
     )
+
+    # aud is not checked (Keycloak leaves it "account"), so pin the authorized party:
+    # without this, any token minted by the realm for a *different* client would be
+    # accepted here (confused-deputy / token reuse across clients).
+    if claims.get("azp") != CLIENT_ID:
+        raise JWTError(f"Token azp '{claims.get('azp')}' is not this client '{CLIENT_ID}'")
+
     return claims
 
 
