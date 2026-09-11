@@ -129,6 +129,30 @@ def test_jwe_roundtrip_restores_inner_jws():
     assert auth.decrypt_id_token(encrypted) == inner_jws
 
 
+def test_jwe_decrypt_rejects_tampered_ciphertext():
+    # Flipping bytes in the authentication tag must make AEAD decryption fail, not
+    # silently return altered plaintext.
+    pub_key = auth.public_encryption_jwks()["keys"][0]
+    encrypted = jwe.encrypt(
+        b"inner-jws", pub_key, algorithm="RSA-OAEP", encryption="A128CBC-HS256"
+    ).decode()
+    header, ek, iv, ct, tag = encrypted.split(".")
+    tampered = ".".join([header, ek, iv, ct, tag[:-2] + ("AA" if tag[-2:] != "AA" else "BB")])
+    with pytest.raises(Exception):
+        auth.decrypt_id_token(tampered)
+
+
+def test_jwe_decrypt_rejects_wrong_recipient_key(signing_material):
+    # A token encrypted to a key the app does not hold must not decrypt with the app's key.
+    _, foreign_jwks = signing_material
+    foreign_enc = {**foreign_jwks["keys"][0], "use": "enc", "alg": "RSA-OAEP"}
+    encrypted = jwe.encrypt(
+        b"inner-jws", foreign_enc, algorithm="RSA-OAEP", encryption="A128CBC-HS256"
+    ).decode()
+    with pytest.raises(Exception):
+        auth.decrypt_id_token(encrypted)
+
+
 # --- RBAC: role extraction and enforcement -------------------------------------
 def test_extract_roles_reads_realm_access():
     claims = {"realm_access": {"roles": ["app-user", "app-admin"]}}
@@ -203,13 +227,14 @@ def _base_claims() -> dict:
         "sub": "user-123",
         "preferred_username": "user",
         "iss": auth.ISSUER,
+        "azp": auth.CLIENT_ID,
         "exp": int(time.time()) + 300,
         "realm_access": {"roles": ["app-user", "app-admin"]},
     }
 
 
 def _patch_jwks(monkeypatch, jwks: dict):
-    async def _fake_jwks():
+    async def _fake_jwks(force: bool = False):
         return jwks
 
     monkeypatch.setattr(auth, "_get_jwks", _fake_jwks)
@@ -251,6 +276,52 @@ def test_validate_token_rejects_unknown_kid(monkeypatch, signing_material):
     token = _sign(private_pem, _base_claims(), kid="not-in-jwks")
     with pytest.raises(JWTError):
         _run(auth.validate_token(token))
+
+
+def test_validate_token_rejects_alg_confusion_hs256(monkeypatch, signing_material):
+    # A token asking to be verified with a symmetric alg (HS256) must be refused by the
+    # RS256-only allow-list — never verified by treating the RSA public key as an HMAC secret.
+    _, jwks = signing_material
+    _patch_jwks(monkeypatch, jwks)
+    forged = jwt.encode(
+        _base_claims(), "attacker-chosen-secret", algorithm="HS256",
+        headers={"kid": _SIGN_KID},
+    )
+    with pytest.raises(JWTError):
+        _run(auth.validate_token(forged))
+
+
+def test_validate_token_rejects_foreign_azp(monkeypatch, signing_material):
+    # A token the realm minted for a different client must be refused even though its
+    # signature, issuer, and expiry are all valid — aud is not checked, so azp is the
+    # only thing standing between us and a confused-deputy token reuse across clients.
+    private_pem, jwks = signing_material
+    _patch_jwks(monkeypatch, jwks)
+    claims = _base_claims()
+    claims["azp"] = "some-other-client"
+    token = _sign(private_pem, claims)
+    with pytest.raises(JWTError):
+        _run(auth.validate_token(token))
+
+
+def test_validate_token_refreshes_jwks_on_unknown_kid(monkeypatch, signing_material):
+    # Keycloak rotated its signing key: the token's kid is absent from the cached JWKS,
+    # so validation must force one refresh and then succeed against the new set rather
+    # than failing every request until the cache TTL expires.
+    private_pem, jwks = signing_material
+    rotated_kid = "rotated-signing-key"
+    rotated_jwks = {"keys": [dict(jwks["keys"][0], kid=rotated_kid)]}
+    calls = {"n": 0}
+
+    async def _fake_jwks(force: bool = False):
+        calls["n"] += 1
+        return rotated_jwks if force else {"keys": []}
+
+    monkeypatch.setattr(auth, "_get_jwks", _fake_jwks)
+    token = _sign(private_pem, _base_claims(), kid=rotated_kid)
+    claims = _run(auth.validate_token(token))
+    assert claims["sub"] == "user-123"
+    assert calls["n"] == 2  # one cached miss, then one forced refresh
 
 
 # --- SAML request adapter (pure, no IdP metadata fetch) ------------------------
